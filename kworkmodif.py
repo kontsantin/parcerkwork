@@ -21,7 +21,6 @@ def parse_article(url):
         print(e)
     return None, None
 
-
 def clean_filename(filename):
     # Заменяем запрещенные символы на дефис
     return re.sub(r'[\\/:*?"<>|]', '-', filename)
@@ -57,19 +56,22 @@ def parse_page(url):
     return articles_data
 
 def main():
-    # URL-адрес страницы для парсинга
-    url = "https://www.cfin.ru/finanalysis/"
+    # Открываем файл с ссылками для парсинга
+    with open('urls.txt', 'r') as file:
+        urls = file.readlines()
 
     # Получаем список ссылок на страницы с тематическими разделами и книгами
     articles_data = []
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    sections = soup.find_all('div', class_='links-box-i')
-    for section in sections:
-        links = section.find_all('a', href=True)
-        for link in links:
-            section_url = requests.compat.urljoin(url, link['href'])
-            articles_data += parse_page(section_url)
+    for url in urls:
+        url = url.strip()  # Удаляем лишние символы (перевод строки, пробелы)
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        sections = soup.find_all('div', class_='links-box-i')
+        for section in sections:
+            links = section.find_all('a', href=True)
+            for link in links:
+                section_url = requests.compat.urljoin(url, link['href'])
+                articles_data += parse_page(section_url)
 
     print(f"Найдено {len(articles_data)} статей для парсинга.")
 
