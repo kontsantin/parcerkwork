@@ -11,6 +11,9 @@ def parse_article(url):
         article = soup.find('article', class_='text-box')
         if article:
             title = article.find('h1').text.strip()
+            # Удаляем изображения из статьи
+            for img in article.find_all('img'):
+                img.extract()
             content = article.text.strip()
             return title, content
     except Exception as e:
@@ -18,32 +21,23 @@ def parse_article(url):
         print(e)
     return None, None
 
+
 def clean_filename(filename):
     # Заменяем запрещенные символы на дефис
     return re.sub(r'[\\/:*?"<>|]', '-', filename)
 
-def main():
-    # URL-адрес страницы для парсинга
-    url = "https://www.cfin.ru/finanalysis/"
-
-    # Получаем список ссылок на страницы с тематическими разделами и книгами
+def parse_page(url):
     articles_data = []
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
-        thematic_links_box = soup.find('div', class_='links-box-i').find('ul')
-        thematic_links = thematic_links_box.find_all('a', href=True)
-        for thematic_link in thematic_links:
-            thematic_url = requests.compat.urljoin(url, thematic_link['href'])
-            print(f"Обрабатываем ссылку: {thematic_url}")
-            
-            # Получаем список ссылок на статьи
-            response = requests.get(thematic_url)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            articles_links_box = soup.find('div', class_='links-box-i').find('ul')
-            articles_links = articles_links_box.find_all('a', href=True)
-            for article_link in articles_links:
-                article_url = requests.compat.urljoin(thematic_url, article_link['href'])
+        
+        # Парсинг статей с текущей страницы
+        thematic_articles = soup.find_all('div', class_='links-box-i')
+        for thematic_article in thematic_articles:
+            links = thematic_article.find_all('a', href=True)
+            for link in links:
+                article_url = requests.compat.urljoin(url, link['href'])
                 print(f"Парсим статью: {article_url}")
                 title, content = parse_article(article_url)
                 if title and content:
@@ -55,11 +49,31 @@ def main():
                     }
                     articles_data.append(article_data)
                     print(f"Статья '{title}' успешно спарсена.")
+                    print(f"Обработано статей: {len(articles_data)}")
+
     except Exception as e:
         print(f"Ошибка при получении ссылок: {url}")
         print(e)
+    return articles_data
 
-    # Сохраняем результаты в один файл JSON
+def main():
+    # URL-адрес страницы для парсинга
+    url = "https://www.cfin.ru/finanalysis/"
+
+    # Получаем список ссылок на страницы с тематическими разделами и книгами
+    articles_data = []
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    sections = soup.find_all('div', class_='links-box-i')
+    for section in sections:
+        links = section.find_all('a', href=True)
+        for link in links:
+            section_url = requests.compat.urljoin(url, link['href'])
+            articles_data += parse_page(section_url)
+
+    print(f"Найдено {len(articles_data)} статей для парсинга.")
+
+    # Сохраняем результаты в один файл JSON с кодировкой UTF-8
     with open('articles.json', 'w', encoding='utf-8') as f:
         json.dump(articles_data, f, ensure_ascii=False, indent=4)
         print("Все статьи успешно сохранены в файле 'articles.json'.")
