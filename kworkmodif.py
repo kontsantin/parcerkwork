@@ -15,13 +15,14 @@ def parse_article(url):
             content_type = response.headers.get('Content-Type')
             publication_date = response.headers.get('Date')
             # Получаем заголовок страницы (если есть)
-            page_title = soup.find('title').text.strip() if soup.find('title') else None
-            title = article.find('h1').text.strip() if article.find('h1') else None
+            title = soup.find('title').text.strip() if soup.find('title') else None
+            h1 = article.find('h1').text.strip() if article.find('h1') else None
             lead_html = str(article.find('p'))  # Первый параграф в HTML
             lead_markdown = md(lead_html)  # Преобразуем lead_html в Markdown
             author = article.find('div', class_='author').text.strip() if article.find('div', class_='author') else None
             # Получаем контент в HTML и Markdown
             content_html = str(article)
+            content_html = re.sub(r'<h1[^>]*>.*?</h1>', '', content_html)
             # Убираем дублирование заголовка из HTML контента
             content_html = re.sub(fr'<h1[^>]*>{title}</h1>', '', content_html, flags=re.IGNORECASE)
             content_markdown = md(content_html)  # Преобразуем content_html в Markdown
@@ -31,8 +32,8 @@ def parse_article(url):
                 'url': url,
                 'content_type': content_type,
                 'publication_date': publication_date,
-                'title': page_title,                
-                'h1': title,  # Добавляем заголовок статьи в поле h1
+                'title': title,                
+                'h1': h1,  # Добавляем заголовок статьи в поле h1
                 'lead_html': lead_html,
                 'lead_markdown': lead_markdown,
                 'content_html': content_html,
@@ -70,7 +71,7 @@ def parse_page(url):
 
 def main():
     # Открываем файл с ссылками для парсинга
-    with open('urls.txt', 'r') as file:
+    with open('urlscopy.txt', 'r') as file:
         urls = file.readlines()
 
     # Получаем список ссылок на страницы с тематическими разделами и книгами
