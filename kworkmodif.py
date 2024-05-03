@@ -14,12 +14,15 @@ def parse_article(url):
             domain = url.split('/')[2]
             content_type = response.headers.get('Content-Type')
             publication_date = response.headers.get('Date')
-            title = article.find('h1').text.strip()
+            # Получаем заголовок страницы (если есть)
+            page_title = soup.find('title').text.strip() if soup.find('title') else None
+            title = article.find('h1').text.strip() if article.find('h1') else None
             lead_html = str(article.find('p'))  # Первый параграф в HTML
             lead_markdown = md(lead_html)  # Преобразуем lead_html в Markdown
             author = article.find('div', class_='author').text.strip() if article.find('div', class_='author') else None
             # Получаем контент в HTML и Markdown
-            content_html = str(article) 
+            content_html = str(article)
+            # Убираем дублирование заголовка из HTML контента
             content_html = re.sub(fr'<h1[^>]*>{title}</h1>', '', content_html, flags=re.IGNORECASE)
             content_markdown = md(content_html)  # Преобразуем content_html в Markdown
 
@@ -28,12 +31,13 @@ def parse_article(url):
                 'url': url,
                 'content_type': content_type,
                 'publication_date': publication_date,
-                'title': title,
+                'title': page_title,                
+                'h1': title,  # Добавляем заголовок статьи в поле h1
                 'lead_html': lead_html,
                 'lead_markdown': lead_markdown,
                 'content_html': content_html,
                 'content_markdown': content_markdown,
-                'author': author
+                'author': author,
             }
     except Exception as e:
         print(f"Ошибка при парсинге статьи: {url}")
